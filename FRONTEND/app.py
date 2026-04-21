@@ -98,10 +98,10 @@ hr { border-color: #E2E8F0; }
 )
 
 # ── Header ────────────────────────────────────────────────────────────────────
-_logo_path = Path(__file__).parent / "assets" / "aivar_logo.jpeg"
+_logo_path = Path(__file__).parent / "assets" / "aivartech_logo.jpeg"
 if _logo_path.exists():
     _logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
-    _logo_html = f'<img src="data:image/jpeg;base64,{_logo_b64}" style="height:46px;" />'
+    _logo_html = f'<img src="data:image/jpeg;base64,{_logo_b64}" style="height:56px;" />'
 else:
     _logo_html = '<div style="font-size:36px;">🪪</div>'
 
