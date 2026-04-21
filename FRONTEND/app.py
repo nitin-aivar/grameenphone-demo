@@ -20,7 +20,7 @@ from utils.result_renderer import render_full_result
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Document Intelligence Platform",
+    page_title="KYC Intelligent Document Processing",
     page_icon="🪪",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -114,10 +114,10 @@ st.markdown(
     {_logo_html}
     <div>
       <div style="color:#FFFFFF;font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-        Aadhaar Masking &amp; Document Intelligence
+        KYC Intelligent Document Processing
       </div>
       <div style="color:#7BA7D4;font-size:13px;margin-top:2px;">
-        Powered by Aivar Innovations
+        Powered by Aivar Innovations &nbsp;·&nbsp; Automated OCR, classification for KYC documents
       </div>
     </div>
     <div style="margin-left:auto;text-align:right;">
@@ -383,9 +383,9 @@ if not uploaded_files and not st.session_state.results:
         """
 <div style="text-align:center;padding:60px 20px;color:#A0AEC0;">
   <div style="font-size:48px;margin-bottom:12px;">📂</div>
-  <div style="font-size:16px;font-weight:600;color:#4A5568;">Upload Aadhaar cards to get started</div>
+  <div style="font-size:16px;font-weight:600;color:#4A5568;">Upload KYC documents to get started</div>
   <div style="font-size:13px;margin-top:6px;">
-    Intelligent OCR, classification &amp; automatic Aadhaar masking — single or batch
+    Automated OCR, document classification &amp; Aadhaar masking — single or batch
   </div>
 </div>
 """,
