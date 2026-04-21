@@ -228,22 +228,20 @@ def render_full_result(
     with tab_results:
         for i, doc in enumerate(docs):
             page_no = doc.get("pageNo", 1)
-            # Show image once per unique page number
             show_images = page_no not in pages_shown
             if show_images:
                 pages_shown.add(page_no)
 
-            with st.container():
+            if i > 0:
                 st.markdown(
-                    '<div style="background:#FFFFFF;border-radius:12px;border:1px solid #E2E8F0;'
-                    'padding:20px 24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">',
+                    '<hr style="border:none;border-top:2px solid #1E5EBB;margin:24px 0;">',
                     unsafe_allow_html=True,
                 )
-                render_document_card(
-                    doc, original_image_bytes, masked_pages, file_label, i,
-                    show_images=show_images, page_images=page_images,
-                )
-                st.markdown('</div>', unsafe_allow_html=True)
+
+            render_document_card(
+                doc, original_image_bytes, masked_pages, file_label, i,
+                show_images=show_images, page_images=page_images,
+            )
 
     with tab_json:
         # Group documents by documentType for separate JSON views
