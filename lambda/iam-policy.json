@@ -1,0 +1,41 @@
+{
+    "_comment": "REFERENCE ONLY — deploy.py builds the actual policy dynamically with auto-detected account ID",
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "S3Read",
+            "Effect": "Allow",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::chola-ocr-pipeline-<ACCOUNT_ID>/*"
+        },
+        {
+            "Sid": "S3Write",
+            "Effect": "Allow",
+            "Action": "s3:PutObject",
+            "Resource": [
+                "arn:aws:s3:::chola-ocr-pipeline-<ACCOUNT_ID>/pipeline_output/*",
+                "arn:aws:s3:::chola-ocr-pipeline-<ACCOUNT_ID>/chola_input/*"
+            ]
+        },
+        {
+            "Sid": "BedrockInvoke",
+            "Effect": "Allow",
+            "Action": [
+                "bedrock:InvokeModel"
+            ],
+            "Resource": [
+                "arn:aws:bedrock:ap-south-1::foundation-model/mistral.*"
+            ]
+        },
+        {
+            "Sid": "CloudWatchLogs",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:ap-south-1:<ACCOUNT_ID>:*"
+        }
+    ]
+}

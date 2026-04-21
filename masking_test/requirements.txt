@@ -1,0 +1,8 @@
+numpy==1.26.4
+onnxruntime==1.24.4
+opencv-python-headless==4.11.0.86
+pillow==12.1.1
+PyMuPDF==1.25.5
+rapidocr-onnxruntime==1.2.3
+pyclipper==1.4.0
+shapely==2.1.2

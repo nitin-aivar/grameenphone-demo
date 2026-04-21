@@ -1,0 +1,27 @@
+Document Processing Pipeline — Live Demo
+Opening the Document Storage
+We begin at the AWS Console and navigate to our cloud storage (S3). We search for the project bucket — chola-ocr-pipeline — and open it.
+
+Uploading a Document
+Inside the bucket, we go to the input folder (pipeline_input/). We click Upload and select a document image — for example, a photo of an Aadhaar card or PAN card. Once uploaded, the pipeline kicks off automatically. No buttons to press, no manual steps.
+
+Waiting for Results (~15 seconds)
+We wait about 15 seconds. During this time, the system automatically:
+
+Reads the document
+Identifies what type of document it is (Aadhaar, PAN, Passport, etc.)
+Extracts all relevant information (name, date of birth, document number, address, etc.)
+If it's an Aadhaar card, it also triggers the masking process for sensitive data
+Reviewing the Outputs
+We navigate back and check the results:
+
+Extracted Data (JSON file) We open the output folder (pipeline_output/) and find a structured data file. It contains all the fields extracted from the document — name, date of birth, address, document number, document type (front/back), and validation checks. This is the data that downstream systems can consume directly.
+
+Masked Document If the uploaded document was an Aadhaar card, we also check the masking folder (chola_input/). The original image has been sent here for automatic redaction — the Aadhaar number and QR code are masked to protect sensitive personal information before storage or further processing.
+
+Key Takeaways
+Fully automated — upload a document and get structured data back in seconds
+No manual data entry — the system reads and extracts everything automatically
+Built-in privacy protection — Aadhaar numbers and QR codes are automatically masked
+Supports multiple document types — Aadhaar (front & back), PAN, Passport, Voter ID
+End-to-end processing under 15 seconds
