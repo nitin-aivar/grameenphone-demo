@@ -103,7 +103,8 @@ def render_document_card(
     page_no = doc.get("pageNo", 1)
     ocr_data = doc.get("ocrData", {})
     additional = doc.get("additionalDetails", {})
-    masked_bytes = (masked_pages or {}).get(page_no)
+    _mp = masked_pages or {}
+    masked_bytes = _mp.get(page_no) or _mp.get(1)
 
     verhoeff = additional.get("verhoeffCheck")
     output_masked = additional.get("outputMaskStatus", False)
@@ -193,7 +194,7 @@ def render_document_card(
                     st.markdown(
                         '<div style="border:1px dashed #CBD5E0;border-radius:8px;height:160px;'
                         'display:flex;align-items:center;justify-content:center;'
-                        'color:#A0AEC0;font-size:12px;">Awaiting masking…</div>',
+                        'color:#A0AEC0;font-size:12px;">Masked image not available</div>',
                         unsafe_allow_html=True,
                     )
         else:
@@ -221,7 +222,7 @@ def render_full_result(
         st.warning("No documents extracted from this file.")
         return
 
-    # Track which pages have already shown their image preview
+    is_single_image = file_label.lower().rsplit(".", 1)[-1] in ("jpg", "jpeg", "png", "webp", "bmp", "tiff", "tif")
     pages_shown: set[int] = set()
 
     tab_results, tab_json = st.tabs(["📋  Results", "{ }  View JSON"])
@@ -229,9 +230,11 @@ def render_full_result(
     with tab_results:
         for i, doc in enumerate(docs):
             page_no = doc.get("pageNo", 1)
-            show_images = page_no not in pages_shown
-            if show_images:
-                pages_shown.add(page_no)
+            if is_single_image:
+                show_images = len(pages_shown) == 0
+            else:
+                show_images = page_no not in pages_shown
+            pages_shown.add(page_no)
 
             if i > 0:
                 st.markdown(
