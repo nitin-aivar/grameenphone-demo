@@ -98,10 +98,10 @@ hr { border-color: #E2E8F0; }
 )
 
 # ── Header ────────────────────────────────────────────────────────────────────
-_logo_path = Path(__file__).parent / "assets" / "aivartech_logo.jpeg"
+_logo_path = Path(__file__).parent / "assets" / "Aivar_v2.png"
 if _logo_path.exists():
     _logo_b64 = base64.b64encode(_logo_path.read_bytes()).decode()
-    _logo_html = f'<img src="data:image/jpeg;base64,{_logo_b64}" style="height:56px;" />'
+    _logo_html = f'<img src="data:image/png;base64,{_logo_b64}" style="height:56px;" />'
 else:
     _logo_html = '<div style="font-size:36px;">🪪</div>'
 
@@ -117,7 +117,7 @@ st.markdown(
         KYC Intelligent Document Processing
       </div>
       <div style="color:#7BA7D4;font-size:13px;margin-top:2px;">
-        Powered by Aivar Innovations &nbsp;·&nbsp; Automated OCR, classification for KYC documents
+        Powered by Aivar Innovations &nbsp;·&nbsp; Classification for KYC documents and Aadhaar masking
       </div>
     </div>
     <div style="margin-left:auto;text-align:right;">
