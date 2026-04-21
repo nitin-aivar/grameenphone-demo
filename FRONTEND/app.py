@@ -350,14 +350,24 @@ if st.session_state.results:
     if len(results) == 1:
         r = results[0]
         render_full_result(r["result_json"], r["file_bytes"], r.get("masked_pages"), r["filename"],
-                           r.get("page_images", {}))
+                           r.get("page_images", {}), result_index=0)
     else:
-        tab_labels = [r["filename"] for r in results]
+        # Deduplicate tab labels for repeated filenames
+        name_counts: dict[str, int] = {}
+        tab_labels = []
+        for r in results:
+            name = r["filename"]
+            name_counts[name] = name_counts.get(name, 0) + 1
+            if name_counts[name] > 1:
+                tab_labels.append(f"{name} ({name_counts[name]})")
+            else:
+                tab_labels.append(name)
+
         tabs = st.tabs(tab_labels)
-        for tab, r in zip(tabs, results):
+        for idx, (tab, r) in enumerate(zip(tabs, results)):
             with tab:
                 render_full_result(r["result_json"], r["file_bytes"], r.get("masked_pages"), r["filename"],
-                                   r.get("page_images", {}))
+                                   r.get("page_images", {}), result_index=idx)
 
     # Download all as ZIP
     _divider()

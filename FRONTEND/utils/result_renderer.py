@@ -206,18 +206,14 @@ def render_document_card(
                 st.caption("Preview not available")
 
 
-_render_counter = 0
-
 def render_full_result(
     result_json: dict,
     original_image_bytes: bytes,
     masked_pages: dict[int, bytes] | None,
     file_label: str,
     page_images: dict | None = None,
+    result_index: int = 0,
 ):
-    global _render_counter
-    _render_counter += 1
-    _uid = _render_counter
     """Render all documents from a single file's pipeline result."""
     docs = result_json.get("result", {}).get("documents", [])
 
@@ -276,7 +272,7 @@ def render_full_result(
                     data=type_json_str.encode(),
                     file_name=f"{file_label}_{doc_type}_result.json",
                     mime="application/json",
-                    key=f"dl_json_{file_label}_{doc_type}_{_uid}",
+                    key=f"dl_json_{result_index}_{file_label}_{doc_type}",
                 )
         else:
             # Single doc type — show the full JSON as usual
@@ -287,5 +283,5 @@ def render_full_result(
                 data=json_str.encode(),
                 file_name=f"{file_label}_result.json",
                 mime="application/json",
-                key=f"dl_json_{file_label}_{_uid}",
+                key=f"dl_json_{result_index}_{file_label}",
             )
