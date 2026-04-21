@@ -8,7 +8,7 @@ from pathlib import Path
 import boto3
 from botocore.exceptions import ClientError
 
-BUCKET = os.environ.get("S3_BUCKET", "chola-ocr-pipeline-757333951934")
+BUCKET = os.environ.get("S3_BUCKET", "chola-ocr-pipeline-732592767494")
 REGION = "ap-south-1"
 INPUT_PREFIX = "pipeline_input"
 OUTPUT_PREFIX = "pipeline_output"
