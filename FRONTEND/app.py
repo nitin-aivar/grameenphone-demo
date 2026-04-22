@@ -140,40 +140,81 @@ if "processing" not in st.session_state:
     st.session_state.processing = False
 
 
+def _fetch_single_result(stem: str, filename: str, timeout: int = 5, interval: int = 2):
+    """Fetch a completed result from S3. Returns dict or None."""
+    result_json = poll_json_result(stem, timeout=timeout, interval=interval)
+    if not result_json:
+        return None
+    masked_pages = fetch_masked_image(stem, timeout=min(timeout, 10), interval=interval)
+    page_images = {}
+    docs = result_json.get("result", {}).get("documents", [])
+    for doc in docs:
+        pn = doc.get("pageNo", 1)
+        if pn not in page_images:
+            img = fetch_page_image(stem, pn)
+            if img:
+                page_images[pn] = img
+    return {
+        "filename": filename,
+        "stem": stem,
+        "result_json": result_json,
+        "masked_pages": masked_pages,
+        "file_bytes": page_images.get(1, b""),
+        "page_images": page_images,
+    }
+
+
 def _restore_results_from_url():
     """Re-fetch results from S3 using stems saved in URL query params."""
-    params = st.query_params
-    encoded = params.get("r")
-    if not encoded or st.session_state.results:
+    if st.session_state.results:
         return
-    entries = encoded.split(",")
-    restored = []
-    for entry in entries:
+
+    params = st.query_params
+
+    # 1) Restore completed results (fast — they already exist in S3)
+    encoded_r = params.get("r")
+    if encoded_r:
+        restored = []
+        for entry in encoded_r.split(","):
+            if ":" not in entry:
+                continue
+            stem, filename = entry.split(":", 1)
+            r = _fetch_single_result(stem, filename, timeout=5, interval=2)
+            if r:
+                restored.append(r)
+        if restored:
+            st.session_state.results = restored
+        return
+
+    # 2) Resume pending/in-progress results (poll with longer timeout)
+    encoded_p = params.get("p")
+    if not encoded_p:
+        return
+
+    entries = []
+    for entry in encoded_p.split(","):
         if ":" not in entry:
             continue
-        stem, filename = entry.split(":", 1)
-        result_json = poll_json_result(stem, timeout=5, interval=2)
-        if not result_json:
-            continue
-        masked_pages = fetch_masked_image(stem, timeout=5, interval=2)
-        page_images = {}
-        docs = result_json.get("result", {}).get("documents", [])
-        for doc in docs:
-            pn = doc.get("pageNo", 1)
-            if pn not in page_images:
-                img = fetch_page_image(stem, pn)
-                if img:
-                    page_images[pn] = img
-        restored.append({
-            "filename": filename,
-            "stem": stem,
-            "result_json": result_json,
-            "masked_pages": masked_pages,
-            "file_bytes": page_images.get(1, b""),
-            "page_images": page_images,
-        })
+        entries.append(entry.split(":", 1))
+
+    if not entries:
+        return
+
+    restored = []
+    with st.spinner("Resuming processing — please wait..."):
+        for stem, filename in entries:
+            r = _fetch_single_result(stem, filename, timeout=300, interval=5)
+            if r:
+                restored.append(r)
+
     if restored:
         st.session_state.results = restored
+        encoded = ",".join(f"{r['stem']}:{r['filename']}" for r in restored)
+        st.query_params.clear()
+        st.query_params["r"] = encoded
+        st.rerun()
+    else:
+        st.query_params.clear()
 
 
 _restore_results_from_url()
@@ -265,6 +306,7 @@ if process_clicked and uploaded_files:
     st.session_state.processing = True
     st.session_state.results = []
     new_results = []
+    pending_entries: list[str] = []
 
     try:
         for file in uploaded_files:
@@ -286,6 +328,9 @@ if process_clicked and uploaded_files:
                 except Exception as e:
                     st.error(f"Upload failed: {e}")
                     continue
+
+                pending_entries.append(f"{stem}:{filename}")
+                st.query_params["p"] = ",".join(pending_entries)
 
                 # Step 1–3: OCR / classify / extract (all happen inside Lambda)
                 status_box.markdown(_step_html(1), unsafe_allow_html=True)
@@ -356,6 +401,7 @@ if process_clicked and uploaded_files:
     finally:
         st.session_state.results = new_results
         st.session_state.processing = False
+        st.query_params.clear()
         if new_results:
             encoded = ",".join(f"{r['stem']}:{r['filename']}" for r in new_results)
             st.query_params["r"] = encoded
