@@ -135,9 +135,48 @@ st.markdown(
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "results" not in st.session_state:
-    st.session_state.results = []   # {filename, stem, result_json, masked_bytes, file_bytes, page_images}; stem = sanitized basename (no UUID)
+    st.session_state.results = []
 if "processing" not in st.session_state:
     st.session_state.processing = False
+
+
+def _restore_results_from_url():
+    """Re-fetch results from S3 using stems saved in URL query params."""
+    params = st.query_params
+    encoded = params.get("r")
+    if not encoded or st.session_state.results:
+        return
+    entries = encoded.split(",")
+    restored = []
+    for entry in entries:
+        if ":" not in entry:
+            continue
+        stem, filename = entry.split(":", 1)
+        result_json = poll_json_result(stem, timeout=5, interval=2)
+        if not result_json:
+            continue
+        masked_pages = fetch_masked_image(stem, timeout=5, interval=2)
+        page_images = {}
+        docs = result_json.get("result", {}).get("documents", [])
+        for doc in docs:
+            pn = doc.get("pageNo", 1)
+            if pn not in page_images:
+                img = fetch_page_image(stem, pn)
+                if img:
+                    page_images[pn] = img
+        restored.append({
+            "filename": filename,
+            "stem": stem,
+            "result_json": result_json,
+            "masked_pages": masked_pages,
+            "file_bytes": page_images.get(1, b""),
+            "page_images": page_images,
+        })
+    if restored:
+        st.session_state.results = restored
+
+
+_restore_results_from_url()
 
 
 def _divider():
@@ -197,6 +236,7 @@ with btn_col:
 with clear_col:
     if st.button("🗑 Clear", width="stretch", disabled=st.session_state.processing):
         st.session_state.results = []
+        st.query_params.clear()
         st.rerun()
 
 # ── Processing pipeline ───────────────────────────────────────────────────────
@@ -316,6 +356,9 @@ if process_clicked and uploaded_files:
     finally:
         st.session_state.results = new_results
         st.session_state.processing = False
+        if new_results:
+            encoded = ",".join(f"{r['stem']}:{r['filename']}" for r in new_results)
+            st.query_params["r"] = encoded
         st.rerun()
 
 # ── Results section ───────────────────────────────────────────────────────────
