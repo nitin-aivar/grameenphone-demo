@@ -138,6 +138,8 @@ if "results" not in st.session_state:
     st.session_state.results = []
 if "processing" not in st.session_state:
     st.session_state.processing = False
+if "uploader_key" not in st.session_state:
+    st.session_state.uploader_key = 0
 
 
 def _fetch_single_result(stem: str, filename: str, timeout: int = 5, interval: int = 2):
@@ -315,6 +317,7 @@ uploaded_files = st.file_uploader(
     type=["png", "jpg", "jpeg", "pdf"],
     accept_multiple_files=True,
     label_visibility="collapsed",
+    key=f"file_uploader_{st.session_state.uploader_key}",
 )
 
 # File list preview
@@ -358,6 +361,7 @@ with btn_col:
 with clear_col:
     if st.button("🗑 Clear", width="stretch", disabled=st.session_state.processing):
         st.session_state.results = []
+        st.session_state.uploader_key += 1
         st.query_params.clear()
         st.rerun()
 
