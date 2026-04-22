@@ -200,12 +200,93 @@ def _restore_results_from_url():
     if not entries:
         return
 
+    def _resume_step_html(steps_done: int) -> str:
+        labels = ["Upload", "OCR", "Classify", "Extract", "Done"]
+        icons  = ["✅", "🔍", "🏷", "📋", "✅"]
+        parts = []
+        for i, (label, icon) in enumerate(zip(labels, icons)):
+            if i < steps_done:
+                color, bg, fw = "#0A7C59", "#E6F4EF", "700"
+            elif i == steps_done:
+                color, bg, fw = "#1E5EBB", "#E8F0FB", "700"
+            else:
+                color, bg, fw = "#A0AEC0", "#F7F8FA", "500"
+            parts.append(
+                f'<span style="background:{bg};color:{color};font-size:12px;font-weight:{fw};'
+                f'padding:4px 10px;border-radius:20px;border:1px solid {color}33;">'
+                f'{icon} {label}</span>'
+            )
+        return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;">' + "".join(parts) + "</div>"
+
+    st.markdown(
+        '<div style="font-size:16px;font-weight:700;color:#0D1B2A;margin-bottom:14px;">'
+        'Resuming processing…</div>',
+        unsafe_allow_html=True,
+    )
+
     restored = []
-    with st.spinner("Resuming processing — please wait..."):
-        for stem, filename in entries:
-            r = _fetch_single_result(stem, filename, timeout=300, interval=5)
-            if r:
-                restored.append(r)
+    for idx, (stem, filename) in enumerate(entries):
+        with st.container():
+            st.markdown(
+                f'<div style="font-size:14px;font-weight:600;color:#0D1B2A;margin-bottom:6px;">'
+                f'📁 {filename} ({idx + 1}/{len(entries)})</div>',
+                unsafe_allow_html=True,
+            )
+            status_box = st.empty()
+            status_box.markdown(_resume_step_html(1), unsafe_allow_html=True)
+            progress_bar = st.progress(0, text="Resuming pipeline…")
+
+            result_json = None
+            t_start = time.time()
+            timeout = 300
+            interval = 5
+            while time.time() - t_start < timeout:
+                elapsed = time.time() - t_start
+                pct = min(int((elapsed / timeout) * 85), 85)
+                progress_bar.progress(pct, text=f"Processing… ({int(elapsed)}s)")
+                try:
+                    result_json = poll_json_result(stem, timeout=interval, interval=interval)
+                except Exception:
+                    result_json = None
+                    break
+                if result_json:
+                    break
+                step = 1 if elapsed < 35 else 2 if elapsed < 60 else 3
+                status_box.markdown(_resume_step_html(step), unsafe_allow_html=True)
+
+            if not result_json:
+                progress_bar.empty()
+                status_box.empty()
+                st.error(f"⏱ Timeout: no result for {filename}")
+                continue
+
+            progress_bar.progress(90, text="Extraction complete")
+            status_box.markdown(_resume_step_html(3), unsafe_allow_html=True)
+
+            masked_pages = fetch_masked_image(stem, timeout=30, interval=5)
+            if masked_pages:
+                progress_bar.progress(100, text="Done ✔")
+            else:
+                progress_bar.progress(100, text="Done ✔")
+            status_box.markdown(_resume_step_html(4), unsafe_allow_html=True)
+
+            page_images = {}
+            docs = result_json.get("result", {}).get("documents", [])
+            for doc in docs:
+                pn = doc.get("pageNo", 1)
+                if pn not in page_images:
+                    img = fetch_page_image(stem, pn)
+                    if img:
+                        page_images[pn] = img
+
+            restored.append({
+                "filename": filename,
+                "stem": stem,
+                "result_json": result_json,
+                "masked_pages": masked_pages,
+                "file_bytes": page_images.get(1, b""),
+                "page_images": page_images,
+            })
 
     if restored:
         st.session_state.results = restored
