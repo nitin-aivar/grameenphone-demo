@@ -306,33 +306,46 @@ if process_clicked and uploaded_files:
     st.session_state.processing = True
     st.session_state.results = []
     new_results = []
-    pending_entries: list[str] = []
 
     try:
+        # ── Phase 1: Upload ALL files to S3 first ────────────────────────
+        uploaded_items: list[dict] = []
+        pending_entries: list[str] = []
+        upload_status = st.empty()
+
         for file in uploaded_files:
             file_bytes = file.getvalue()
             filename = file.name
+            upload_status.info(f"Uploading {filename}… ({len(uploaded_items) + 1}/{len(uploaded_files)})")
+            try:
+                stem = upload_file(file_bytes, filename, mask_digits=mask_digits)
+            except Exception as e:
+                st.error(f"Upload failed for {filename}: {e}")
+                continue
+            uploaded_items.append({"stem": stem, "filename": filename, "file_bytes": file_bytes})
+            pending_entries.append(f"{stem}:{filename}")
+            st.query_params["p"] = ",".join(pending_entries)
+
+        upload_status.empty()
+
+        if not uploaded_items:
+            st.error("No files were uploaded successfully.")
+        else:
+            st.success(f"All {len(uploaded_items)} file(s) uploaded. Processing started…")
+
+        # ── Phase 2: Poll results for each uploaded file ─────────────────
+        for idx, item in enumerate(uploaded_items):
+            stem = item["stem"]
+            filename = item["filename"]
+            file_bytes = item["file_bytes"]
 
             with st.container():
                 st.markdown(
-                    f'<div style="font-size:14px;font-weight:600;color:#0D1B2A;margin-bottom:6px;">📁 {filename}</div>',
+                    f'<div style="font-size:14px;font-weight:600;color:#0D1B2A;margin-bottom:6px;">'
+                    f'📁 {filename} ({idx + 1}/{len(uploaded_items)})</div>',
                     unsafe_allow_html=True,
                 )
                 status_box = st.empty()
-
-                # Step 0: Upload
-                status_box.markdown(_step_html(0), unsafe_allow_html=True)
-                try:
-                    with st.spinner(f"Uploading {filename}…"):
-                        stem = upload_file(file_bytes, filename, mask_digits=mask_digits)
-                except Exception as e:
-                    st.error(f"Upload failed: {e}")
-                    continue
-
-                pending_entries.append(f"{stem}:{filename}")
-                st.query_params["p"] = ",".join(pending_entries)
-
-                # Step 1–3: OCR / classify / extract (all happen inside Lambda)
                 status_box.markdown(_step_html(1), unsafe_allow_html=True)
                 progress_bar = st.progress(0, text="Waiting for OCR pipeline…")
 
@@ -366,7 +379,6 @@ if process_clicked and uploaded_files:
                 progress_bar.progress(90, text="Extraction complete")
                 status_box.markdown(_step_html(3), unsafe_allow_html=True)
 
-                # Step 4: Masking (Aadhaar only — fetched from Lambda via S3)
                 masked_pages = None
                 if is_aadhaar_result(result_json):
                     status_box.markdown(_step_html(3, is_aadhaar=True), unsafe_allow_html=True)
@@ -381,7 +393,6 @@ if process_clicked and uploaded_files:
                     progress_bar.progress(100, text="Done ✔")
                     status_box.markdown(_step_html(4), unsafe_allow_html=True)
 
-                # Fetch per-page images for PDF preview
                 page_images = {}
                 docs = result_json.get("result", {}).get("documents", [])
                 unique_pages = {doc.get("pageNo", 1) for doc in docs}
